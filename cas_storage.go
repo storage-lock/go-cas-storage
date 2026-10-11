@@ -11,6 +11,8 @@ import (
 )
 
 // CASSStorage 内容寻址存储实现
+// 尚未接入真实服务端，仅为占位实现，不可用于分布式锁。
+// 真正接入时需借助服务端原子语义实现 CAS。
 type CASSStorage struct {
 	mu sync.RWMutex
 }
@@ -26,7 +28,11 @@ const StorageName = "cas-storage"
 func (x *CASSStorage) GetName() string { return StorageName }
 
 func (x *CASSStorage) Capabilities() []storage.StorageCapability {
-	return []storage.StorageCapability{storage.CapabilityCAS, storage.CapabilityReliableTime}
+	return []storage.StorageCapability{storage.CapabilityReliableTime, storage.CapabilityWatch}
+}
+
+func (x *CASSStorage) Watch(ctx context.Context, lockId string) (<-chan *storage.LockInformation, error) {
+	return storage.NewPollingLockWatcher(x, 500*time.Millisecond).Watch(ctx, lockId)
 }
 
 func (x *CASSStorage) Init(ctx context.Context) error { return nil }
@@ -34,19 +40,19 @@ func (x *CASSStorage) Init(ctx context.Context) error { return nil }
 func (x *CASSStorage) CreateWithVersion(ctx context.Context, lockId string, version storage.Version, lockInformation *storage.LockInformation) error {
 	x.mu.Lock()
 	defer x.mu.Unlock()
-	return nil
+	return storage_lock.ErrStorageCapabilityMissing
 }
 
 func (x *CASSStorage) UpdateWithVersion(ctx context.Context, lockId string, expectedVersion, newVersion storage.Version, lockInformation *storage.LockInformation) error {
 	x.mu.Lock()
 	defer x.mu.Unlock()
-	return nil
+	return storage_lock.ErrStorageCapabilityMissing
 }
 
 func (x *CASSStorage) DeleteWithVersion(ctx context.Context, lockId string, expectedVersion storage.Version, lockInformation *storage.LockInformation) error {
 	x.mu.Lock()
 	defer x.mu.Unlock()
-	return nil
+	return storage_lock.ErrStorageCapabilityMissing
 }
 
 func (x *CASSStorage) Get(ctx context.Context, lockId string) (string, error) {
